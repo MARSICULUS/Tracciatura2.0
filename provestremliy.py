@@ -45,7 +45,7 @@ ZONE_COORDS = {
     "sx big strapiombo":    (950, 280),
     "verticale":            (1080, 160 ),
     "dx prua":              (1300, 250 ),
-    "dx verticale":         (1350, 160),
+    "dx verticale":         (1350, 480),
     "dx placca":            (1350, 790),
 }
 
