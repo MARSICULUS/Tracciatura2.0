@@ -70,7 +70,7 @@ def _build_download_url(url: str) -> str:
         return f"https://drive.google.com/uc?export=download&id={file_id}"
 
 
-@st.cache_data
+
 def load_data(gdrive_url: str, sheet_index: int) -> pd.DataFrame:
     download_url = _build_download_url(gdrive_url)
     response = requests.get(download_url)
@@ -197,7 +197,7 @@ def fig_tracciatori(df: pd.DataFrame, title: str) -> go.Figure:
         .pivot(index="TRACCIATORE", columns="GRADO", values="Conteggio")
     )
     df_tracciatori["tot"] = df_tracciatori.sum(axis=1)
-    df_tracciatori = df_tracciatori.sort_values("tot", ascending=False)
+    df_tracciatori = df_tracciatori.sort_values("tot", ascending=True)
 
     fig = px.bar(
         df_tracciatori,
