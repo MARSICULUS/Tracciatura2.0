@@ -1,4 +1,5 @@
 import io
+import base64
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
@@ -33,6 +34,21 @@ HOLD_COLORS = {
     "Menta":    "#A6FBB2",
     "Grigio":   "#A9A9A9",
 }
+
+# ── Coordinate zone sulla mappa (x, y) in pixel su immagine 2000x1210 ───────
+# Origine in alto a sinistra. Stimate dalla piantina annotata.
+ZONE_COORDS = {
+    "New strapiombo":       (310, 200),
+    "New verticale":        (460, 370),
+    "New placca":           (460, 560),
+    "sx legg. strapiombo":  (590, 450),
+    "sx big strapiombo":    (590, 280),
+    "verticale":            (790, 90),
+    "dx prua":              (1010, 200),
+    "dx verticale":         (1010, 380),
+    "dx placca":            (1010, 555),
+}
+
 
 # ── Caricamento e pulizia dati ───────────────────────────────────────────────
 
@@ -176,6 +192,74 @@ def fig_zone(df_on: pd.DataFrame) -> go.Figure:
 
 # ── Layout Streamlit ─────────────────────────────────────────────────────────
 
+def fig_mappa(df_on: pd.DataFrame, grado: str, img_path: str) -> go.Figure:
+    """Mappa della palestra con i boulder del grado selezionato."""
+    import base64
+
+    with open(img_path, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
+    img_src = f"data:image/png;base64,{encoded}"
+
+    IMG_W, IMG_H = 2000, 1210
+
+    filtered = df_on[df_on["GRADO"] == grado]
+    zone_counts = filtered.groupby("ZONA", observed=False).size().reset_index(name="Count")
+    zone_counts = zone_counts[zone_counts["Count"] > 0]
+
+    fig = go.Figure()
+
+    # Sfondo piantina
+    fig.add_layout_image(
+        dict(
+            source=img_src,
+            xref="x", yref="y",
+            x=0, y=0,
+            sizex=IMG_W, sizey=IMG_H,
+            sizing="stretch",
+            layer="below",
+        )
+    )
+
+    # Punti per ogni zona
+    if not zone_counts.empty:
+        xs, ys, texts, sizes = [], [], [], []
+        for _, row in zone_counts.iterrows():
+            zona = row["ZONA"]
+            if zona in ZONE_COORDS:
+                x, y = ZONE_COORDS[zona]
+                xs.append(x)
+                ys.append(y)
+                texts.append(f"{zona}<br>{row['Count']} boulder")
+                sizes.append(20 + row["Count"] * 8)
+
+        fig.add_trace(go.Scatter(
+            x=xs, y=ys,
+            mode="markers+text",
+            marker=dict(
+                size=sizes,
+                color=GRADE_COLORS.get(grado, "#888"),
+                line=dict(color="black", width=2),
+                opacity=0.85,
+            ),
+            text=[str(r["Count"]) for _, r in zone_counts.iterrows() if r["ZONA"] in ZONE_COORDS],
+            textposition="middle center",
+            textfont=dict(size=14, color="black", family="Arial Black"),
+            hovertext=texts,
+            hoverinfo="text",
+        ))
+
+    fig.update_layout(
+        xaxis=dict(range=[0, IMG_W], showgrid=False, zeroline=False, visible=False),
+        yaxis=dict(range=[IMG_H, 0], showgrid=False, zeroline=False, visible=False,
+                   scaleanchor="x", scaleratio=1),
+        margin=dict(l=0, r=0, t=30, b=0),
+        plot_bgcolor="white",
+        height=600,
+        title=dict(text=f"Mappa boulder — {grado}", x=0.5),
+    )
+    return fig
+
+
 def page_overview(df: pd.DataFrame) -> None:
     st.header("Overview generale")
     df_na = get_missing_summary(df)
@@ -207,12 +291,35 @@ def page_on_set(df: pd.DataFrame) -> None:
         st.dataframe(df_on, use_container_width=True)
 
 
+def page_mappa(df: pd.DataFrame) -> None:
+    st.header("Mappa boulder")
+    df_on = get_on_set(df)
+
+    grado = st.selectbox(
+        "Seleziona il grado",
+        options=GRADE_ORDER,
+        index=2,
+    )
+
+    fig = fig_mappa(df_on, grado, "/mnt/user-data/uploads/mappa_palestra.png")
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Tabella riepilogativa
+    filtered = df_on[df_on["GRADO"] == grado]
+    if not filtered.empty:
+        summary = filtered.groupby("ZONA", observed=False).size().reset_index(name="Boulder")
+        summary = summary[summary["Boulder"] > 0].sort_values("Boulder", ascending=False)
+        st.dataframe(summary, use_container_width=True, hide_index=True)
+    else:
+        st.info(f"Nessun boulder on set con grado {grado}.")
+
+
 def main() -> None:
     st.set_page_config(page_title="Boulder Dashboard", layout="wide")
 
     df = load_data(GDRIVE_URL, SHEET_INDEX)
 
-    pages = {"Overview generale": page_overview, "On set": page_on_set}
+    pages = {"Overview generale": page_overview, "On set": page_on_set, "Mappa": page_mappa}
     choice = st.sidebar.selectbox("Sezione", list(pages.keys()))
     pages[choice](df)
 
