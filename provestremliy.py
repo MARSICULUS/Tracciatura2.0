@@ -190,9 +190,15 @@ def fig_zone(df_on: pd.DataFrame) -> go.Figure:
     return fig
 
 def fig_tracciatori(df: pd.DataFrame, title: str) -> go.Figure:
-    df_tracciatori =  df.groupby(["TRACCIATORE"], observed= False).size().reset_index(name="Conteggio")
+    df_tracciatori =  (
+        df.groupby(["TRACCIATORE", "GRADO"], observed= False)
+        .size()
+        .reset_index(name="Conteggio")
+        .pivot(index="TRACCIATORE", columns="GRADO", values="Conteggio")
+        .sort_index())
     fig = px.bar(
         df_tracciatori, x="TRACCIATORE", y="Conteggio", text="Conteggio",
+        orientation="h", color_discrete_map=GRADE_COLORS,
         color="TRACCIATORE", color_discrete_map=GRADE_COLORS,
     )
     fig.update_layout(
