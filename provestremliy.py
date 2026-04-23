@@ -301,7 +301,7 @@ def page_mappa(df: pd.DataFrame) -> None:
         index=2,
     )
 
-    fig = fig_mappa(df_on, grado, "/mnt/user-data/uploads/mappa_palestra.png")
+    fig = fig_mappa(df_on, grado, "mappa_palestra.png")
     st.plotly_chart(fig, use_container_width=True)
 
     # Tabella riepilogativa
