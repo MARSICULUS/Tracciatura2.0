@@ -189,6 +189,26 @@ def fig_zone(df_on: pd.DataFrame) -> go.Figure:
     fig.update_traces(marker_line_color="black", marker_line_width=0.8)
     return fig
 
+def fig_tracciatori(df: pd.DataFrame, title: str) -> go.Figure:
+    df_tracciatori =  df.groupby(["TRACCIATORE"], observed= False).size().reset_index(name="Conteggio")
+    fig = px.bar(
+        df_tracciatori, x="TRACCIATORE", y="Conteggio", text="Conteggio",
+        color="TRACCIATORE", color_discrete_map=GRADE_COLORS,
+    )
+    fig.update_layout(
+        title=dict(text=title, x=0.5),
+        xaxis=dict(title="", showticklabels=False),
+        yaxis=dict(title=""),
+        showlegend=False,
+        plot_bgcolor="white",
+    )
+    fig.update_traces(
+        textposition="inside",
+        textfont=dict(color="black"),
+        marker_line=dict(color="black", width=0.5),
+    )
+    return fig
+
 
 # ── Layout Streamlit ─────────────────────────────────────────────────────────
 
@@ -272,6 +292,7 @@ def page_overview(df: pd.DataFrame) -> None:
         fig_grade_distribution(df, "Distribuzione di tutti i gradi"),
         use_container_width=True,
     )
+    st.plotly_chart(fig_tracciatori(df, "conteggio tracciatori"))
 
 
 def page_on_set(df: pd.DataFrame) -> None:
