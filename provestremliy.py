@@ -197,9 +197,8 @@ def fig_tracciatori(df: pd.DataFrame, title: str) -> go.Figure:
         .pivot(index="TRACCIATORE", columns="GRADO", values="Conteggio")
         .sort_index())
     fig = px.bar(
-        df_tracciatori, x="TRACCIATORE", y="Conteggio", text="Conteggio",
+        df_tracciatori,
         orientation="h", color_discrete_map=GRADE_COLORS,
-        color="TRACCIATORE"
     )
     fig.update_layout(
         title=dict(text=title, x=0.5),
