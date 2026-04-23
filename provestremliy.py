@@ -196,7 +196,7 @@ def fig_tracciatori(df: pd.DataFrame, title: str) -> go.Figure:
         .reset_index(name="Conteggio")
         .pivot(index="TRACCIATORE", columns="GRADO", values="Conteggio")
     )
-    df_tracciatori["tot"] = df_tracciatori.groupby("TRACCIATORE")["Conteggio"].transform("sum")
+    df_tracciatori["tot"] = df_tracciatori.sum(axis=1)
     df_tracciatori = df_tracciatori.sort_values("tot", ascending=False)
 
     fig = px.bar(
