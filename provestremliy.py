@@ -38,15 +38,15 @@ HOLD_COLORS = {
 # ── Coordinate zone sulla mappa (x, y) in pixel su immagine 2000x1210 ───────
 # Origine in alto a sinistra. Stimate dalla piantina annotata.
 ZONE_COORDS = {
-    "New strapiombo":       (310, 200),
-    "New verticale":        (460, 370),
-    "New placca":           (460, 560),
-    "sx legg. strapiombo":  (590, 450),
-    "sx big strapiombo":    (590, 280),
-    "verticale":            (790, 90),
-    "dx prua":              (1010, 200),
-    "dx verticale":         (1010, 380),
-    "dx placca":            (1010, 555),
+    "New strapiombo":       (430, 250),
+    "New verticale":        (520, 510),
+    "New placca":           (580, 800),
+    "sx legg. strapiombo":  (940, 710),
+    "sx big strapiombo":    (950, 280),
+    "verticale":            (1080, 160 ),
+    "dx prua":              (1300, 250 ),
+    "dx verticale":         (1350, 160),
+    "dx placca":            (1350, 790),
 }
 
 
