@@ -47,6 +47,15 @@ ZONE_COORDS = {
     "dx placca":            (1350, 790),
 }
 
+GRADE_TARGETS = {
+    "Smile":  10,
+    "Bianco": 15,
+    "Giallo": 15,
+    "Blu":    15,
+    "Verde":  5,
+    "Rosso":  5,
+}
+
 # ── Caricamento e pulizia dati ───────────────────────────────────────────────
 
 def _build_download_url(url: str) -> str:
@@ -134,12 +143,30 @@ def fig_holds(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def fig_grade_distribution(df: pd.DataFrame, title: str) -> go.Figure:
+def fig_grade_distribution(df: pd.DataFrame, title: str, show_targets: bool = False) -> go.Figure:
     dfp = df.groupby("GRADO", observed=False).size().reset_index(name="Conteggio")
     fig = px.bar(
         dfp, x="GRADO", y="Conteggio", text="Conteggio",
         color="GRADO", color_discrete_map=GRADE_COLORS,
     )
+    if show_targets:
+        for i, grado in enumerate(GRADE_ORDER):
+            target = GRADE_TARGETS.get(grado)
+            if target is None:
+                continue
+            fig.add_shape(
+                type="line",
+                x0=i - 0.4, x1=i + 0.4,
+                y0=target, y1=target,
+                line=dict(color="black", width=2, dash="dash"),
+            )
+            fig.add_annotation(
+                x=i + 0.45, y=target,
+                text=str(target),
+                showarrow=False,
+                font=dict(size=11, color="black"),
+                xanchor="left",
+            )
     fig.update_layout(
         title=dict(text=title, x=0.5),
         xaxis=dict(title="", showticklabels=False),
@@ -153,7 +180,6 @@ def fig_grade_distribution(df: pd.DataFrame, title: str) -> go.Figure:
         marker_line=dict(color="black", width=0.5),
     )
     return fig
-
 
 def fig_zone(df_on: pd.DataFrame) -> go.Figure:
     df_zone = (
