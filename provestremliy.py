@@ -143,7 +143,7 @@ def fig_holds(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def fig_grade_distribution(df: pd.DataFrame, title: str, show_targets: bool = False) -> go.Figure:
+def fig_grade_distribution(df: pd.DataFrame, title: str, show_targets: bool = True) -> go.Figure:
     dfp = df.groupby("GRADO", observed=False).size().reset_index(name="Conteggio")
     fig = px.bar(
         dfp, x="GRADO", y="Conteggio", text="Conteggio",
@@ -156,16 +156,9 @@ def fig_grade_distribution(df: pd.DataFrame, title: str, show_targets: bool = Fa
                 continue
             fig.add_shape(
                 type="line",
-                x0=i - 0.4, x1=i + 0.4,
+                x0=i - 0.55, x1=i + 0.55,
                 y0=target, y1=target,
-                line=dict(color="black", width=2, dash="dash"),
-            )
-            fig.add_annotation(
-                x=i + 0.45, y=target,
-                text=str(target),
-                showarrow=False,
-                font=dict(size=11, color="black"),
-                xanchor="left",
+                line=dict(color="red", width=4, dash="dash"),
             )
     fig.update_layout(
         title=dict(text=title, x=0.5),
@@ -212,6 +205,7 @@ def fig_tracciatori(df: pd.DataFrame, title: str) -> go.Figure:
     )
     df_tracciatori["tot"] = df_tracciatori.sum(axis=1)
     df_tracciatori = df_tracciatori.sort_values("tot", ascending=True)
+    df_tracciatori = df_tracciatori.drop("tot", axis = 1)
     fig = px.bar(df_tracciatori, orientation="h", color_discrete_map=GRADE_COLORS)
     fig.update_layout(
         title=dict(text=title, x=0.5),
@@ -374,14 +368,6 @@ def fig_mappa_torte(df_on: pd.DataFrame, img_path: str) -> go.Figure:
             continue
         for trace in _pie_traces_for_zone(zona, cx, cy, grade_counts):
             fig.add_trace(trace)
-        # fig.add_annotation(
-        #     x=cx, y=cy + 85,
-        #     text=zona,
-        #     showarrow=False,
-        #     font=dict(size=11, color="black"),
-        #     bgcolor="rgba(255,255,255,0.75)",
-        #     borderpad=2,
-        # )
 
     fig.update_layout(
         xaxis=dict(range=[0, IMG_W], showgrid=False, zeroline=False, visible=False),
@@ -529,7 +515,7 @@ def page_mappa_vecchi(df: pd.DataFrame) -> None:
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader(f"Lista dei {n} boulder più vecchi")
-    cols_show = [c for c in ["ID", "ZONA", "GRADO", "COLORE PRESE", "DATA SCADENZA"] if c in df_top.columns]
+    cols_show = [c for c in ["ID", "ZONA", "GRADO", "COLORE PRESE","TRACIATORE", "DATA SCADENZA"] if c in df_top.columns]
     st.dataframe(df_top[cols_show].reset_index(drop=True), use_container_width=True, hide_index=True)
 
 
