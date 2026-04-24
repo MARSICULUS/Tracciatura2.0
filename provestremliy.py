@@ -165,7 +165,7 @@ def fig_zone(df_on: pd.DataFrame) -> go.Figure:
         .sort_index()
     )
     fig = px.bar(
-        df_zone, barmode="group", orientation="v",
+        df_zone, orientation="h",
         color_discrete_map=GRADE_COLORS,
     )
     fig.update_layout(
@@ -458,10 +458,7 @@ def page_overview(df: pd.DataFrame) -> None:
 def page_on_set(df: pd.DataFrame) -> None:
     st.header("Boulder on set")
     df_on = get_on_set(df)
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Boulder on set", len(df_on))
-    col2.metric("Zone attive", df_on["ZONA"].nunique())
-    col3.metric("Gradi presenti", df_on["GRADO"].nunique())
+    st.subheader(f"Totale boulder:{len(df_on)}")
     st.plotly_chart(fig_grade_distribution(df_on, "Distribuzione dei gradi on set"), use_container_width=True)
     st.plotly_chart(fig_zone(df_on), use_container_width=True)
     with st.expander("Mostra dati grezzi"):
