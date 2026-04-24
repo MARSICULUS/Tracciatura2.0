@@ -43,8 +43,8 @@ ZONE_COORDS = {
     "New placca":           (580, 800),
     "sx legg. strapiombo":  (940, 710),
     "sx big strapiombo":    (950, 280),
-    "verticale":            (1080, 160 ),
-    "dx prua":              (1300, 250 ),
+    "verticale":            (1080, 160),
+    "dx prua":              (1300, 250),
     "dx verticale":         (1350, 480),
     "dx placca":            (1350, 790),
 }
@@ -217,6 +217,89 @@ def fig_tracciatori(df: pd.DataFrame, title: str) -> go.Figure:
     )
     return fig
 
+def fig_mappa_vecchi(df_top, img_path: str):
+    """Mappa con i boulder più vecchi, colorati per grado."""
+    with open(img_path, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
+    img_src = f"data:image/png;base64,{encoded}"
+ 
+    IMG_W, IMG_H = 2000, 1210
+ 
+    fig = go.Figure()
+    fig.add_layout_image(dict(
+        source=img_src, xref="x", yref="y",
+        x=0, y=0, sizex=IMG_W, sizey=IMG_H,
+        sizing="stretch", layer="below",
+    ))
+ 
+    for grado in GRADE_ORDER:
+        subset = df_top[df_top["GRADO"] == grado]
+        if subset.empty:
+            continue
+        zone_groups = subset.groupby("ZONA", observed=False)
+        xs, ys, hover_texts, labels = [], [], [], []
+        for zona, group in zone_groups:
+            if zona not in ZONE_COORDS:
+                continue
+            x, y = ZONE_COORDS[zona]
+            xs.append(x)
+            ys.append(y)
+            nomi = "<br>".join(
+                f"• {row['NOME']}  ({row['DATA SCADENZA'].strftime('%d/%m/%Y') if pd.notna(row['DATA SCADENZA']) else 'n/d'})"
+                for _, row in group.iterrows()
+            )
+            hover_texts.append(f"<b>{zona}</b><br>{nomi}")
+            labels.append(str(len(group)))
+ 
+        fig.add_trace(go.Scatter(
+            x=xs, y=ys,
+            mode="markers+text",
+            name=grado,
+            marker=dict(
+                size=36,
+                color=GRADE_COLORS.get(grado, "#888"),
+                line=dict(color="black", width=2),
+                opacity=0.9,
+            ),
+            text=labels,
+            textposition="middle center",
+            textfont=dict(size=13, color="black", family="Arial Black"),
+            hovertext=hover_texts,
+            hoverinfo="text",
+        ))
+ 
+    fig.update_layout(
+        xaxis=dict(range=[0, IMG_W], showgrid=False, zeroline=False, visible=False),
+        yaxis=dict(range=[IMG_H, 0], showgrid=False, zeroline=False, visible=False,
+                   scaleanchor="x", scaleratio=1),
+        margin=dict(l=0, r=0, t=40, b=0),
+        plot_bgcolor="white",
+        height=600,
+        title=dict(text="I boulder più vecchi on set", x=0.5),
+        legend=dict(title="Grado", orientation="v"),
+    )
+    return fig
+
+def page_mappa_vecchi(df) -> None:
+    st.header("Boulder più vecchi")
+    df_on = get_on_set(df)
+ 
+    n = st.slider("Quanti boulder mostrare?", min_value=5, max_value=20, value=10, step=1)
+ 
+    df_sorted = df_on.dropna(subset=["DATA SCADENZA"]).sort_values("DATA SCADENZA")
+    df_top = df_sorted.head(n)
+ 
+    fig = fig_mappa_vecchi(df_top, "/mnt/user-data/uploads/mappa_palestra.png")
+    st.plotly_chart(fig, use_container_width=True)
+ 
+    st.subheader(f"Lista dei {n} boulder più vecchi")
+    cols_show = [c for c in ["NOME", "ZONA", "GRADO", "COLORE PRESE", "DATA SCADENZA"] if c in df_top.columns]
+    st.dataframe(
+        df_top[cols_show].reset_index(drop=True),
+        use_container_width=True,
+        hide_index=True,
+    )
+ 
 
 # ── Layout Streamlit ─────────────────────────────────────────────────────────
 
@@ -348,7 +431,7 @@ def main() -> None:
 
     df = load_data(GDRIVE_URL, SHEET_INDEX)
 
-    pages = {"Overview generale": page_overview, "On set": page_on_set, "Mappa": page_mappa}
+    pages = {"Overview generale": page_overview, "On set": page_on_set, "Mappa": page_mappa, "Boulder vecchi": page_mappa_vecchi}
     choice = st.sidebar.selectbox("Sezione", list(pages.keys()))
     pages[choice](df)
 
