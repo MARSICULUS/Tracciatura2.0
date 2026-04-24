@@ -289,7 +289,7 @@ def page_mappa_vecchi(df) -> None:
     df_sorted = df_on.dropna(subset=["DATA SCADENZA"]).sort_values("DATA SCADENZA")
     df_top = df_sorted.head(n)
  
-    fig = fig_mappa_vecchi(df_top, "/mnt/user-data/uploads/mappa_palestra.png")
+    fig = fig_mappa_vecchi(df_top, "mappa_palestra.png")
     st.plotly_chart(fig, use_container_width=True)
  
     st.subheader(f"Lista dei {n} boulder più vecchi")
