@@ -15,7 +15,7 @@ SHEET_INDEX = 0
 
 GRADE_ORDER = ["Smile", "Bianco", "Giallo", "Blu", "Verde", "Rosso"]
 GRADE_COLORS = {
-    "Smile":  "#DDDDDD",
+    "Smile":  "#9E9E9E",
     "Bianco": "#FCFCFC",
     "Giallo": "#FFD700",
     "Blu":    "#1F77B4",
@@ -40,7 +40,7 @@ ZONE_COORDS = {
     "New verticale":        (520, 510),
     "New placca":           (580, 800),
     "sx legg. strapiombo":  (940, 710),
-    "sx big strapiombo":    (950, 280),
+    "sx big strapiombo":    (860, 380),
     "verticale":            (1080, 160),
     "dx prua":              (1300, 250),
     "dx verticale":         (1350, 480),
@@ -265,7 +265,7 @@ def fig_mappa(df_on: pd.DataFrame, grado: str, img_path: str) -> go.Figure:
 
 # ── Mappa a torte ────────────────────────────────────────────────────────────
 
-def _pie_traces_for_zone(zona: str, cx: float, cy: float, grade_counts: dict, r: float = 65) -> list:
+def _pie_traces_for_zone(zona: str, cx: float, cy: float, grade_counts: dict, r: float = 90) -> list:
     """Disegna una torta come poligoni Scatter centrata in (cx, cy)."""
     total = sum(grade_counts.values())
     if total == 0:
@@ -349,14 +349,14 @@ def fig_mappa_torte(df_on: pd.DataFrame, img_path: str) -> go.Figure:
             continue
         for trace in _pie_traces_for_zone(zona, cx, cy, grade_counts):
             fig.add_trace(trace)
-        fig.add_annotation(
-            x=cx, y=cy + 85,
-            text=zona,
-            showarrow=False,
-            font=dict(size=11, color="black"),
-            bgcolor="rgba(255,255,255,0.75)",
-            borderpad=2,
-        )
+        # fig.add_annotation(
+        #     x=cx, y=cy + 85,
+        #     text=zona,
+        #     showarrow=False,
+        #     font=dict(size=11, color="black"),
+        #     bgcolor="rgba(255,255,255,0.75)",
+        #     borderpad=2,
+        # )
 
     fig.update_layout(
         xaxis=dict(range=[0, IMG_W], showgrid=False, zeroline=False, visible=False),
@@ -445,14 +445,14 @@ def fig_mappa_vecchi(df_top, img_path: str) -> go.Figure:
 
 def page_overview(df: pd.DataFrame) -> None:
     st.header("Overview generale")
+    st.plotly_chart(fig_grade_distribution(df, "Distribuzione di tutti i gradi"), use_container_width=True)
+    st.plotly_chart(fig_tracciatori(df, "Conteggio tracciatori"), use_container_width=True)
+    st.plotly_chart(fig_holds(df), use_container_width=True)
     df_na = get_missing_summary(df)
     if not df_na.empty:
         st.plotly_chart(fig_missing(df_na), use_container_width=True)
     else:
         st.success("Nessun dato mancante nel database.")
-    st.plotly_chart(fig_holds(df), use_container_width=True)
-    st.plotly_chart(fig_grade_distribution(df, "Distribuzione di tutti i gradi"), use_container_width=True)
-    st.plotly_chart(fig_tracciatori(df, "Conteggio tracciatori"), use_container_width=True)
 
 
 def page_on_set(df: pd.DataFrame) -> None:
@@ -515,10 +515,10 @@ def main() -> None:
     st.set_page_config(page_title="Boulder Dashboard", layout="wide")
     df = load_data(GDRIVE_URL, SHEET_INDEX)
     pages = {
-        "Overview generale": page_overview,
         "On set":            page_on_set,
         "Mappa":             page_mappa,
         "Boulder vecchi":    page_mappa_vecchi,
+        "Overview generale": page_overview,
     }
     choice = st.sidebar.selectbox("Sezione", list(pages.keys()))
     pages[choice](df)
