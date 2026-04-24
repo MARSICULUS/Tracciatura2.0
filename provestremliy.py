@@ -55,11 +55,6 @@ ZONE_COORDS = {
 import re
 
 def _build_download_url(url: str) -> str:
-    """
-    Converte qualsiasi URL di Google Drive/Sheets in un URL di download diretto.
-    - Google Sheets  → export come .xlsx
-    - File Drive     → download diretto
-    """
     match = re.search(r"/d/([a-zA-Z0-9_-]+)", url)
     if not match:
         raise ValueError(f"Impossibile estrarre l'ID dall'URL: {url}")
@@ -69,8 +64,6 @@ def _build_download_url(url: str) -> str:
     else:
         return f"https://drive.google.com/uc?export=download&id={file_id}"
 
-
-
 def load_data(gdrive_url: str, sheet_index: int) -> pd.DataFrame:
     download_url = _build_download_url(gdrive_url)
     response = requests.get(download_url)
@@ -78,10 +71,8 @@ def load_data(gdrive_url: str, sheet_index: int) -> pd.DataFrame:
     df = pd.read_excel(io.BytesIO(response.content), sheet_name=sheet_index)
     df = df[df["COLORE PRESE"].notnull()].copy()
     df["DATA SCADENZA"] = pd.to_datetime(df["DATA SCADENZA"])
-
     for col in df.select_dtypes("object").columns:
-        df[col] = df[col].astype("category")
-
+        df[col] = df[col].astype("category")    
     df["GRADO"] = df["GRADO"].cat.reorder_categories(GRADE_ORDER, ordered=True)
     return df
 
@@ -190,15 +181,14 @@ def fig_zone(df_on: pd.DataFrame) -> go.Figure:
     return fig
 
 def fig_tracciatori(df: pd.DataFrame, title: str) -> go.Figure:
-    df_tracciatori =  (
-        df.groupby(["TRACCIATORE", "GRADO"], observed= False)
+    df_tracciatori = (
+        df.groupby(["TRACCIATORE", "GRADO"], observed=False)
         .size()
         .reset_index(name="Conteggio")
         .pivot(index="TRACCIATORE", columns="GRADO", values="Conteggio")
     )
     df_tracciatori["tot"] = df_tracciatori.sum(axis=1)
     df_tracciatori = df_tracciatori.sort_values("tot", ascending=True)
-
     fig = px.bar(
         df_tracciatori,
         orientation="h", color_discrete_map=GRADE_COLORS,
@@ -217,96 +207,9 @@ def fig_tracciatori(df: pd.DataFrame, title: str) -> go.Figure:
     )
     return fig
 
-def fig_mappa_vecchi(df_top, img_path: str):
-    """Mappa con i boulder più vecchi, colorati per grado."""
-    with open(img_path, "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
-    img_src = f"data:image/png;base64,{encoded}"
- 
-    IMG_W, IMG_H = 2000, 1210
- 
-    fig = go.Figure()
-    fig.add_layout_image(dict(
-        source=img_src, xref="x", yref="y",
-        x=0, y=0, sizex=IMG_W, sizey=IMG_H,
-        sizing="stretch", layer="below",
-    ))
- 
-    for grado in GRADE_ORDER:
-        subset = df_top[df_top["GRADO"] == grado]
-        if subset.empty:
-            continue
-        zone_groups = subset.groupby("ZONA", observed=False)
-        xs, ys, hover_texts, labels = [], [], [], []
-        for zona, group in zone_groups:
-            if zona not in ZONE_COORDS:
-                continue
-            x, y = ZONE_COORDS[zona]
-            xs.append(x)
-            ys.append(y)
-            nomi = "<br>".join(
-                f"• {row['NOME']}  ({row['DATA SCADENZA'].strftime('%d/%m/%Y') if pd.notna(row['DATA SCADENZA']) else 'n/d'})"
-                for _, row in group.iterrows()
-            )
-            hover_texts.append(f"<b>{zona}</b><br>{nomi}")
-            labels.append(str(len(group)))
- 
-        fig.add_trace(go.Scatter(
-            x=xs, y=ys,
-            mode="markers+text",
-            name=grado,
-            marker=dict(
-                size=36,
-                color=GRADE_COLORS.get(grado, "#888"),
-                line=dict(color="black", width=2),
-                opacity=0.9,
-            ),
-            text=labels,
-            textposition="middle center",
-            textfont=dict(size=13, color="black", family="Arial Black"),
-            hovertext=hover_texts,
-            hoverinfo="text",
-        ))
- 
-    fig.update_layout(
-        xaxis=dict(range=[0, IMG_W], showgrid=False, zeroline=False, visible=False),
-        yaxis=dict(range=[IMG_H, 0], showgrid=False, zeroline=False, visible=False,
-                   scaleanchor="x", scaleratio=1),
-        margin=dict(l=0, r=0, t=40, b=0),
-        plot_bgcolor="white",
-        height=600,
-        title=dict(text="I boulder più vecchi on set", x=0.5),
-        legend=dict(title="Grado", orientation="v"),
-    )
-    return fig
-
-def page_mappa_vecchi(df) -> None:
-    st.header("Boulder più vecchi")
-    df_on = get_on_set(df)
- 
-    n = st.slider("Quanti boulder mostrare?", min_value=5, max_value=20, value=10, step=1)
- 
-    df_sorted = df_on.dropna(subset=["DATA SCADENZA"]).sort_values("DATA SCADENZA")
-    df_top = df_sorted.head(n)
- 
-    fig = fig_mappa_vecchi(df_top, "mappa_palestra.png")
-    st.plotly_chart(fig, use_container_width=True)
- 
-    st.subheader(f"Lista dei {n} boulder più vecchi")
-    cols_show = [c for c in ["NOME", "ZONA", "GRADO", "COLORE PRESE", "DATA SCADENZA"] if c in df_top.columns]
-    st.dataframe(
-        df_top[cols_show].reset_index(drop=True),
-        use_container_width=True,
-        hide_index=True,
-    )
- 
-
-# ── Layout Streamlit ─────────────────────────────────────────────────────────
 
 def fig_mappa(df_on: pd.DataFrame, grado: str, img_path: str) -> go.Figure:
     """Mappa della palestra con i boulder del grado selezionato."""
-    import base64
-
     with open(img_path, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
     img_src = f"data:image/png;base64,{encoded}"
@@ -318,20 +221,12 @@ def fig_mappa(df_on: pd.DataFrame, grado: str, img_path: str) -> go.Figure:
     zone_counts = zone_counts[zone_counts["Count"] > 0]
 
     fig = go.Figure()
+    fig.add_layout_image(dict(
+        source=img_src, xref="x", yref="y",
+        x=0, y=0, sizex=IMG_W, sizey=IMG_H,
+        sizing="stretch", layer="below",
+    ))
 
-    # Sfondo piantina
-    fig.add_layout_image(
-        dict(
-            source=img_src,
-            xref="x", yref="y",
-            x=0, y=0,
-            sizex=IMG_W, sizey=IMG_H,
-            sizing="stretch",
-            layer="below",
-        )
-    )
-
-    # Punti per ogni zona
     if not zone_counts.empty:
         xs, ys, texts, sizes = [], [], [], []
         for _, row in zone_counts.iterrows():
@@ -371,6 +266,71 @@ def fig_mappa(df_on: pd.DataFrame, grado: str, img_path: str) -> go.Figure:
     return fig
 
 
+# ── NUOVO: fig_mappa_vecchi ──────────────────────────────────────────────────
+def fig_mappa_vecchi(df_top, img_path: str) -> go.Figure:
+    """Mappa con i boulder più vecchi, colorati per grado."""
+    with open(img_path, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
+    img_src = f"data:image/png;base64,{encoded}"
+
+    IMG_W, IMG_H = 2000, 1210
+
+    fig = go.Figure()
+    fig.add_layout_image(dict(
+        source=img_src, xref="x", yref="y",
+        x=0, y=0, sizex=IMG_W, sizey=IMG_H,
+        sizing="stretch", layer="below",
+    ))
+
+    # Un trace per grado → legenda colorata automatica
+    for grado in GRADE_ORDER:
+        subset = df_top[df_top["GRADO"] == grado]
+        if subset.empty:
+            continue
+        xs, ys, hover_texts, labels = [], [], [], []
+        for zona, group in subset.groupby("ZONA", observed=False):
+            if zona not in ZONE_COORDS:
+                continue
+            x, y = ZONE_COORDS[zona]
+            xs.append(x)
+            ys.append(y)
+            nomi = "<br>".join(
+                f"• {row['NOME']}  ({row['DATA SCADENZA'].strftime('%d/%m/%Y') if pd.notna(row['DATA SCADENZA']) else 'n/d'})"
+                for _, row in group.iterrows()
+            )
+            hover_texts.append(f"<b>{zona}</b><br>{nomi}")
+            labels.append(str(len(group)))
+
+        fig.add_trace(go.Scatter(
+            x=xs, y=ys,
+            mode="markers+text",
+            name=grado,
+            marker=dict(
+                size=36,
+                color=GRADE_COLORS.get(grado, "#888"),
+                line=dict(color="black", width=2),
+                opacity=0.9,
+            ),
+            text=labels,
+            textposition="middle center",
+            textfont=dict(size=13, color="black", family="Arial Black"),
+            hovertext=hover_texts,
+            hoverinfo="text",
+        ))
+
+    fig.update_layout(
+        xaxis=dict(range=[0, IMG_W], showgrid=False, zeroline=False, visible=False),
+        yaxis=dict(range=[IMG_H, 0], showgrid=False, zeroline=False, visible=False,
+                   scaleanchor="x", scaleratio=1),
+        margin=dict(l=0, r=0, t=40, b=0),
+        plot_bgcolor="white",
+        height=600,
+        title=dict(text="I boulder più vecchi on set", x=0.5),
+        legend=dict(title="Grado", orientation="v"),
+    )
+    return fig
+
+# ── Layout Streamlit ─────────────────────────────────────────────────────────
 def page_overview(df: pd.DataFrame) -> None:
     st.header("Overview generale")
     df_na = get_missing_summary(df)
@@ -383,7 +343,7 @@ def page_overview(df: pd.DataFrame) -> None:
         fig_grade_distribution(df, "Distribuzione di tutti i gradi"),
         use_container_width=True,
     )
-    st.plotly_chart(fig_tracciatori(df, "conteggio tracciatori"))
+    st.plotly_chart(fig_tracciatori(df, "Conteggio tracciatori"), use_container_width=True)
 
 
 def page_on_set(df: pd.DataFrame) -> None:
@@ -393,7 +353,6 @@ def page_on_set(df: pd.DataFrame) -> None:
     col1.metric("Boulder on set", len(df_on))
     col2.metric("Zone attive", df_on["ZONA"].nunique())
     col3.metric("Gradi presenti", df_on["GRADO"].nunique())
-
     st.plotly_chart(
         fig_grade_distribution(df_on, "Distribuzione dei gradi on set"),
         use_container_width=True,
@@ -406,17 +365,9 @@ def page_on_set(df: pd.DataFrame) -> None:
 def page_mappa(df: pd.DataFrame) -> None:
     st.header("Mappa boulder")
     df_on = get_on_set(df)
-
-    grado = st.selectbox(
-        "Seleziona il grado",
-        options=GRADE_ORDER,
-        index=2,
-    )
-
+    grado = st.selectbox("Seleziona il grado", options=GRADE_ORDER, index=2)
     fig = fig_mappa(df_on, grado, "mappa_palestra.png")
     st.plotly_chart(fig, use_container_width=True)
-
-    # Tabella riepilogativa
     filtered = df_on[df_on["GRADO"] == grado]
     if not filtered.empty:
         summary = filtered.groupby("ZONA", observed=False).size().reset_index(name="Boulder")
@@ -426,12 +377,38 @@ def page_mappa(df: pd.DataFrame) -> None:
         st.info(f"Nessun boulder on set con grado {grado}.")
 
 
+# ── NUOVO: page_mappa_vecchi ─────────────────────────────────────────────────
+def page_mappa_vecchi(df: pd.DataFrame) -> None:
+    st.header("Boulder più vecchi")
+    df_on = get_on_set(df)
+
+    n = st.slider("Quanti boulder mostrare?", min_value=5, max_value=20, value=10, step=1)  # NUOVO: slider
+
+    df_sorted = df_on.dropna(subset=["DATA SCADENZA"]).sort_values("DATA SCADENZA")  # NUOVO: ordina per data
+    df_top = df_sorted.head(n)  # NUOVO: prendi i primi n
+
+    fig = fig_mappa_vecchi(df_top, "mappa_palestra.png")  # NUOVO: usa fig_mappa_vecchi
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader(f"Lista dei {n} boulder più vecchi")  # NUOVO: lista sotto la mappa
+    cols_show = [c for c in ["NOME", "ZONA", "GRADO", "COLORE PRESE", "DATA SCADENZA"] if c in df_top.columns]
+    st.dataframe(
+        df_top[cols_show].reset_index(drop=True),
+        use_container_width=True,
+        hide_index=True,
+    )
+# ── FINE NUOVO: page_mappa_vecchi ────────────────────────────────────────────
+
+
 def main() -> None:
     st.set_page_config(page_title="Boulder Dashboard", layout="wide")
-
     df = load_data(GDRIVE_URL, SHEET_INDEX)
-
-    pages = {"Overview generale": page_overview, "On set": page_on_set, "Mappa": page_mappa, "Boulder vecchi": page_mappa_vecchi}
+    pages = {
+        "Overview generale": page_overview,
+        "On set":            page_on_set,
+        "Mappa":             page_mappa,
+        "Boulder vecchi":    page_mappa_vecchi,   # NUOVO: aggiunta voce sidebar
+    }
     choice = st.sidebar.selectbox("Sezione", list(pages.keys()))
     pages[choice](df)
 
