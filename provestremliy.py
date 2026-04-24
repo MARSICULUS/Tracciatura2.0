@@ -515,7 +515,7 @@ def page_mappa_vecchi(df: pd.DataFrame) -> None:
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader(f"Lista dei {n} boulder più vecchi")
-    cols_show = [c for c in ["ID", "ZONA", "GRADO", "COLORE PRESE","TRACIATORE", "DATA SCADENZA"] if c in df_top.columns]
+    cols_show = [c for c in ["ID", "ZONA", "GRADO", "COLORE PRESE","TRACCIATORE", "DATA SCADENZA"] if c in df_top.columns]
     st.dataframe(df_top[cols_show].reset_index(drop=True), use_container_width=True, hide_index=True)
 
 
