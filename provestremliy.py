@@ -143,7 +143,7 @@ def fig_holds(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def fig_grade_distribution(df: pd.DataFrame, title: str, show_targets: bool = True) -> go.Figure:
+def fig_grade_distribution(df: pd.DataFrame, title: str, show_targets: bool = False) -> go.Figure:
     dfp = df.groupby("GRADO", observed=False).size().reset_index(name="Conteggio")
     fig = px.bar(
         dfp, x="GRADO", y="Conteggio", text="Conteggio",
@@ -470,7 +470,7 @@ def page_on_set(df: pd.DataFrame) -> None:
     st.header("Boulder on set")
     df_on = get_on_set(df)
     st.subheader(f"Totale boulder:{len(df_on)}")
-    st.plotly_chart(fig_grade_distribution(df_on, "Distribuzione dei gradi on set"), use_container_width=True)
+    st.plotly_chart(fig_grade_distribution(df_on, "Distribuzione dei gradi on set", True), use_container_width=True)
     st.plotly_chart(fig_zone(df_on), use_container_width=True)
     with st.expander("Mostra dati grezzi"):
         st.dataframe(df_on, use_container_width=True)
